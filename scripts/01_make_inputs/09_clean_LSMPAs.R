@@ -33,7 +33,7 @@ list_of_lsmpas <- read_excel(here("raw_data", "list_LSMPAs.xlsx"), sheet = 1) %>
 # UNEP-WCMC and IUCN (2024), Protected Planet: The World Database on Protected Areas (WDPA)
 # and World Database on Other Effective Area-based Conservation Measures (WD-OECM) [Online],
 # December 2024, Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
-all_mpas <- list.files(path =  here("raw_data", "WDPA_WDOECM_Dec2024_Public_marine_shp"),
+all_mpas <- list.files(path =  here("raw_data", "WDPA_WDOECM_Feb2023_Public_marine_shp"),
                        pattern = "polygons.shp",
                        full.names = T,
                        recursive = T) %>%
