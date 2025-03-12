@@ -23,6 +23,7 @@ pacman::p_load(
   here,
   fixest,
   rnaturalearth,
+  nngeo,
   sf,
   tidyverse
 )
@@ -47,7 +48,7 @@ select_mpas <- mpas %>%
     "309888",        # PIPA
     "555629385",     # Revillagigedo
     "555651558"      # Asención
-    # "555512151",   # Chagos - Can't do Chagos because 1) there is no data before it was implemented an 2) there is no "other sets" data to calculate dFAD set as % of total
+    # "555512151"   # Chagos - Can't do Chagos because 1) there is no data before it was implemented an 2) there is no "other sets" data to calculate dFAD set as % of total
     # "555624169",   # Nazca
     # "555622118"    # Palau
   )) %>% 
@@ -141,7 +142,7 @@ gradient_plot <- dist_gradient %>%
   labs(x = "Distance form MPA boundary (NM)",
        y = "Mean change in dFAD effort",
        fill = "Large-Scale Marine Protected Area",
-       color = "Large-Scale Marine Protected Area",)
+       color = "Large-Scale Marine Protected Area")
 
 
 ggsave(plot = gradient_plot,
@@ -185,7 +186,7 @@ dist_gradient %>%
   pivot_wider(names_from = post,
               values_from = sets_dfad,
               names_prefix = "post_") %>% 
-  mutate(dif = (post_1 - post_0) / post_0) %>% 
+  mutate(dif = (post_1 - post_0)) %>% 
   ggplot(aes(x = ring_num - 25, y = dif, color = name)) +
   geom_line() +
   geom_hline(yintercept = 0) +

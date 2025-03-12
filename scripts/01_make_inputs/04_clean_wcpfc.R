@@ -97,7 +97,6 @@ annual_wcpfc <- mon_wcpfc_raw %>%
   group_by(year, lat, lon) %>% 
   summarize_at(.vars = vars(sets_tot, sets_dfad, catch_tot, catch_dfad), .funs = "sum") %>% 
   ungroup() %>% 
-  filter(sets_tot > 0) %>% 
   mutate(cpue_tot = catch_tot / sets_tot,
          cpue_dfad = catch_dfad / sets_dfad,
          dfad_prop_tot = sets_dfad / sets_tot,

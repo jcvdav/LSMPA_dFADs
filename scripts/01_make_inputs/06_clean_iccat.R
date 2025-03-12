@@ -1,3 +1,8 @@
+pacman::p_load(
+  here,
+  tidyverse,
+  janitor
+)
 
 con <- readRDS(file = here("raw_data/rfmo_data/ICCAT/ICCAT_database.rds"))
 
@@ -21,7 +26,7 @@ annual_iccat <- data %>%
          catch_unit == "kg",    #
          eff1 > 0,
          quad_id > 0,
-         eff1type %in% c("NO.HOOKS", "NO.SETS") | eff2type %in% c("NO.HOOKS", "NO.SETS"),
+         ((eff1type ==  "NO.SETS") | (eff2type == "NO.SETS")),
          # time_period_id <= 12, #This would keep only data that are reported monthly, but we're using it all to keep up to annual
          !(eff1 == 0 & eff1type == "-none-"),
          square_type_code %in% c("1x1", "5x5")) %>%
@@ -34,6 +39,7 @@ annual_iccat <- data %>%
   drop_na(effort_measure) %>%
   drop_na(effort) %>%
   filter(effort > 0) %>%
+  filter(effort < 1000) |> # There are about 69 entries with hughe numbers of effort that make no sense
   select(-c(eff1, eff1type, eff2, eff2type)) %>% 
   mutate(
     # Data are reported in Kg so we convert to MT
@@ -66,10 +72,10 @@ annual_iccat <- data %>%
          num_sets = effort,
          catch_tot) %>%
   group_by(year, lat, lon) %>% 
-  summarize(sets_tot = sum(num_sets, na.rm = T),
-            sets_dfad = sum(num_sets[set_type == "FAD"], na.rm = T),
+  summarize(sets_dfad = sum(num_sets[set_type == "FAD"], na.rm = T),
+            catch_dfad = sum(catch_tot[set_type == "FAD"], na.rm = T),
+            sets_tot = sum(num_sets, na.rm = T),
             catch_tot = sum(catch_tot, na.rm = T),
-            catch_dfad = sum(num_sets[set_type == "FAD"], na.rm = T),
             .groups = "drop") %>% 
   filter(sets_tot > 0,
          catch_tot > 0) %>% 

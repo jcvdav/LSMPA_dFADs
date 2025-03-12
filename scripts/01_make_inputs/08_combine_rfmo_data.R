@@ -36,7 +36,8 @@ rfmo <- bind_rows(wcpfc, iattc, iccat, iotc) %>%
 # X ----------------------------------------------------------------------------
 rfmo %>%
   group_by(lat, lon) %>%
-  summarize(sets_dfad = sum(sets_dfad, na.rm = T)) %>% 
+  summarize(sets_dfad = sum(sets_dfad, na.rm = T),
+            .groups = "drop") %>% 
   ggplot(mapping = aes(x = lon, y = lat, fill = log(sets_dfad))) +
   geom_tile() +
   coord_equal() +
