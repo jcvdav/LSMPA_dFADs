@@ -62,10 +62,10 @@ rfmo_ps_effort_raster <- st_as_sf(x = rfmo_ps_effort,
                      resolution = 1, crs = "EPSG:4326"),
             field = "sets_dfad")
 
-rfmo_ps_intensity_raster <- (rfmo_ps_effort_raster / cellSize(rfmo_ps_effort_raster))
-
 target_resolution <- 100000
-rfmo_ps_effort_raster_reproj <- project(rfmo_ps_intensity_raster, proj, res = target_resolution, method = "bilinear") * (target_resolution ^ 2)
+
+rfmo_ps_intensity_raster <- (rfmo_ps_effort_raster / (cellSize(rfmo_ps_effort_raster) / (target_resolution ^ 2)))
+rfmo_ps_effort_raster_reproj <- project(rfmo_ps_intensity_raster, proj, res = target_resolution, method = "bilinear")
 
 # Check that values are relatively the same
 sum(values(rfmo_ps_effort_raster), na.rm = T)
