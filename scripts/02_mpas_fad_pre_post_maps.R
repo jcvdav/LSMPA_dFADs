@@ -72,52 +72,43 @@ get_legend <- function(plot, legend = NULL) {
 
 # Work with MPAS ---------------------------------------------------------------
 # Subset MPAS of interest
-select_mpas <- mpas %>% 
+select_mpas <- mpas |> 
   filter(wdpaid %in% c(
     # "555705293",   # Cordillera de Coiba
     "11753",         # Galapagos
     "309888",        # PIPA
     "555629385",     # Revillagigedo
-    "555651558"     # Asención
-    # "555512151",      # Chagos - Can't do Chagos because 1) there is no data before it was implemented an 2) there is no "other sets" data to calculate dFAD set as % of total
-    # "555624169",   # Nazca
-    # "555622118"    # Palau
-  )) %>% 
+    "555651558",     # Asención
+    "555512151"      # Chagos - Can't do Chagos because 1) there is no data before it was implemented an 2) there is no "other sets" data to calculate dFAD set as % of total
+  )) |> 
   nngeo::st_remove_holes()
 
 # Build buffer of 200 NM
-buf_200 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(200, "nautical_mile")) %>% 
-  mutate(dist_200 = 1) %>%
+buf_200 <- select_mpas |> 
+  st_buffer(dist = units::as_units(200, "nautical_mile")) |> 
+  mutate(dist_200 = 1) |>
   select(dist_200, wdpaid, name, year_enforced)
 
-# Build buffer of 100 NM
-buf_100 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(100, "nautical_mile")) %>% 
-  mutate(dist_100 = 1) %>%
-  select(dist_100)
-
 # Work with catch and effort data ----------------------------------------------
-annual_pre_post <- rfmo_data %>% 
+annual_pre_post <- rfmo_data |> 
   st_as_sf(coords = c("lon", "lat"),
-           crs = "EPSG:4326") %>% 
-  st_join(buf_200) %>% 
-  st_join(buf_100) %>% 
-  st_filter(buf_200) %>%
-  st_filter(st_union(select_mpas), .predicate = st_disjoint) %>% 
-  bind_cols(st_coordinates(.)) %>% 
-  st_drop_geometry() %>% 
+           crs = "EPSG:4326") |> 
+  st_join(buf_200) |> 
+  st_filter(buf_200) |>
+  st_filter(st_union(select_mpas), .predicate = st_disjoint) %>%
+  bind_cols(st_coordinates(.)) |> 
+  st_drop_geometry() |> 
   mutate(event = year - year_enforced,
          post = ifelse(event >= 0, "After", "Before"),
-         post = fct_relevel(post, "Before", "After"),
-         near = ifelse(is.na(dist_100) & dist_200 == 1, "Far", "Near")) %>% 
+         post = fct_relevel(post, "Before", "After")) |> 
   rename(lon = X, lat = Y)
 
-pre_post <- annual_pre_post %>% 
-  filter(between(event, -5, 4)) %>% 
-  group_by(src, wdpaid, name, year_enforced, post, lon, lat, near) %>% 
-  summarize_all(sum, na.rm = T) %>% 
-  ungroup() %>% 
+# We keep data from 5 years before and 5 years after. event = 0 is the year enforced
+pre_post <- annual_pre_post |> 
+  filter(between(event, -5, 4)) |> 
+  group_by(src, wdpaid, name, year_enforced, post, lon, lat) |> 
+  summarize_all(sum, na.rm = T) |> 
+  ungroup() |> 
   mutate(fad_pct_of_total = sets_dfad / sets_tot)
 
 
@@ -128,16 +119,17 @@ saveRDS(pre_post, file = "processed_data/pre_post_activity_by_select_mpa.rds")
 ## VISUALIZE ###################################################################
 
 # X ----------------------------------------------------------------------------
-my_plot <- function(data, hack1 = F, hack2 = F) {
-  # browser()
+before_after_plot <- function(data, hack = F) {
+  # Take all of the MPAs and buffers and keep only the one we are plotting
   this_mpa <- filter(select_mpas, wdpaid == data$wdpaid[1])
   this_buffer <- filter(buf_200, wdpaid == data$wdpaid[1])
   
-  means <- data %>% 
-    group_by(wdpaid, post) %>% 
+  # Calculate means to overlay as text on the Beofre and After plot
+  means <- data |> 
+    group_by(wdpaid, post) |> 
     summarize(m = paste0(round(mean(fad_pct_of_total, na.rm = T), 3) * 100, "%"),
-              .groups = "drop") %>% 
-    left_join(this_mpa) %>% 
+              .groups = "drop") |> 
+    left_join(this_mpa, by = join_by(wdpaid)) |> 
     st_as_sf(sf_column_name = "geometry")
   
   pre_post <- ggplot() +
@@ -161,31 +153,42 @@ my_plot <- function(data, hack1 = F, hack2 = F) {
                        labels = ~ ifelse(seq_along(.x) %% 2 == 1, .x, "")) +
     theme(legend.position = "none")
   
-  if(isTRUE(hack1)) {
+  # This is just a hack to return the legend instead of a plot, used when building the panel
+  if(isTRUE(hack)) {
     return(get_legend(
       pre_post +
         theme(legend.position = "bottom")
     ))
   }
   
-  # Now the change 
-  dif_means <- data %>% 
-    group_by(wdpaid, post) %>% 
+  return(pre_post)
+  
+}
+
+change_plot <- function(data, hack = F) {
+  # Take all of the MPAs and buffers and keep only the one we are plotting
+  this_mpa <- filter(select_mpas, wdpaid == data$wdpaid[1])
+  this_buffer <- filter(buf_200, wdpaid == data$wdpaid[1])
+  
+  # Change in means to overlay on the Difference plot
+  dif_means <- data |> 
+    group_by(wdpaid, post) |> 
     summarize(m = mean(fad_pct_of_total, na.rm = T),
-              .groups = "drop") %>% 
+              .groups = "drop") |> 
     pivot_wider(names_from = post,
-                values_from = m) %>% 
-    mutate(dif = paste0(round((After - Before), 3) * 100, "%")) %>% 
-    left_join(this_mpa) %>% 
+                values_from = m) |> 
+    mutate(dif = paste0(round((After - Before), 3) * 100, "%")) |> 
+    left_join(this_mpa, by = join_by(wdpaid)) |> 
     st_as_sf(sf_column_name = "geometry")
   
-  change <- data %>% 
-    select(post, lon, lat, fad_pct_of_total) %>% 
+  
+  change <- data |> 
+    select(post, lon, lat, fad_pct_of_total) |> 
     pivot_wider(names_from = post,
                 values_from = fad_pct_of_total,
-                values_fill = 0) %>% 
+                values_fill = 0) |> 
     mutate(delta = After - Before,
-           strip = "After - Before") %>% 
+           strip = "After - Before") |> 
     ggplot() +
     geom_tile(aes(x = lon, y = lat, fill = delta)) +
     geom_sf(data = this_mpa, fill = scales::muted("red"), color = "black") +
@@ -205,65 +208,67 @@ my_plot <- function(data, hack1 = F, hack2 = F) {
                        labels = ~ ifelse(seq_along(.x) %% 2 == 1, .x, "")) +
     theme(legend.position = "none")
   
-  if(isTRUE(hack2)) {
+  if(isTRUE(hack)) {
     return(get_legend(
       change +
         theme(legend.position = "bottom")
     ))}
   
-  p <- cowplot::plot_grid(pre_post, change,
-                          rel_heights = c(1, 1),
-                          rel_widths = c(1.9, 1),
-                          axis = "b",
-                          align = "hv")
+  return(change)
   
-  return(p)
 }
 
-plots <- pre_post %>% 
-  mutate(name = fct_reorder(factor(name), year_enforced)) %>% 
-  group_by(name) %>% 
-  nest() %>% 
-  arrange(name) %>% 
-  mutate(p = map(data, .f = my_plot))
+nested_data <- pre_post |> 
+  filter(!wdpaid == "555512151") |> 
+  mutate(name = fct_reorder(factor(name), year_enforced)) |> 
+  group_by(name) |> 
+  nest() |> 
+  arrange(name)
+
+pre_post_plots <- nested_data |> 
+  mutate(p = map(data, .f = before_after_plot))
+
+change_plots <- nested_data |> 
+  mutate(p = map(data, .f = change_plot))
 
 # Build legends ----------------------------
-legend_pre_post <- pre_post %>% 
-  group_by(name) %>% 
-  nest() %>% 
-  head(1) %>% 
-  unnest(data) %>% 
-  my_plot(hack1 = T)
+legend_pre_post <- nested_data |> 
+  head(1) |> 
+  unnest(data) |> 
+  before_after_plot(hack = T)
 
-legend_change <-  pre_post %>% 
-  group_by(name) %>% 
-  nest() %>% 
-  head(1) %>% 
-  unnest(data) %>% 
-  ungroup() %>% 
-  my_plot(hack2 = T)
-
-legend <- plot_grid(legend_pre_post,
-                    legend_change,
-                    rel_widths = c(1.9, 1),
-                    align = "hv",
-                    axis = "b",
-                    ncol = 2)
-
+legend_change <- nested_data |> 
+  head(1) |> 
+  unnest(data) |> 
+  ungroup() |> 
+  change_plot(hack = T)
 
 # Combine all ------------------------------------------------------------------
-final_plot <- cowplot::plot_grid(legend,
-                                 plots$p[[1]],
-                                 plots$p[[2]],
-                                 plots$p[[3]],
-                                 plots$p[[4]],
-                                 rel_heights = c(0.45, 1, 1, 1, 1),
-                                 ncol = 1)
+final_pre_post_plot <- cowplot::plot_grid(legend_pre_post,
+                                          pre_post_plots$p[[1]],
+                                          pre_post_plots$p[[2]],
+                                          pre_post_plots$p[[3]],
+                                          pre_post_plots$p[[4]],
+                                          rel_heights = c(0.45, 1, 1, 1, 1),
+                                          ncol = 1)
+
+final_change_plot <- cowplot::plot_grid(legend_change,
+                                        change_plots$p[[1]],
+                                        change_plots$p[[2]],
+                                        change_plots$p[[3]],
+                                        change_plots$p[[4]],
+                                        rel_heights = c(0.45, 1, 1, 1, 1),
+                                        ncol = 1)
 
 
-ggsave(plot = final_plot,
-       filename = "mpas_fad_pre_post.pdf",
+ggsave(plot = final_pre_post_plot,
+       filename = here("results", "figs", "mpas_fad_pre_post.pdf"),
        units = "cm",
-       width = 9.2,
+       width = 6,
        height = 12)
 
+ggsave(plot = final_change_plot,
+       filename = here("results", "figs", "mpas_fad_dif.pdf"),
+       units = "cm",
+       width = 3,
+       height = 12)
