@@ -6,14 +6,6 @@
 # juancvd@stanford.edu
 # date
 #
-# Two main objectives:
-# 1) Looking at gradient of effort moving away from boundary in a BACI set-up
-# 2) What % of total FAD effort ocurrs within X miles of an MPA (and how does it
-# compare to the amount of total water):
-# For example, 90% of dFAD effort ocurring worlwide happens within 200 NM of
-# an LSMPA, despite the fact that only 10% of purse seine fishing grounds are 
-# lcoated within 200 NM of an LSMPA.
-# 
 ################################################################################
 
 ## SET UP ######################################################################
@@ -22,6 +14,7 @@
 pacman::p_load(
   here,
   fixest,
+  modelsummary,
   rnaturalearth,
   nngeo,
   sf,
@@ -37,11 +30,12 @@ theme_set(theme_linedraw(base_size = 8) +
                   legend.title = element_text(hjust = 0.5)))
 
 # Load data --------------------------------------------------------------------
-annual_pre_post <- readRDS(file = here("processed_data/annual_pre_post_activity_by_select_mpa.rds"))
+annual_pre_post <- readRDS(file = here("processed_data/annual_pre_post_activity_by_select_mpa.rds")) |> 
+  filter(between(event, -5, 4))
 mpas <- st_read(here("processed_data", "selected_LSMPAs_viz.gpkg"))
 
 ## PROCESSING ##################################################################
-select_mpas <- mpas %>% 
+select_mpas <- mpas |> 
   filter(wdpaid %in% c(
     # "555705293",   # Cordillera de Coiba
     "11753",         # Galapagos
@@ -49,115 +43,163 @@ select_mpas <- mpas %>%
     "555629385",     # Revillagigedo
     "555651558"      # Asención
     # "555512151"   # Chagos - Can't do Chagos because 1) there is no data before it was implemented an 2) there is no "other sets" data to calculate dFAD set as % of total
-    # "555624169",   # Nazca
-    # "555622118"    # Palau
-  )) %>% 
+  )) |> 
   nngeo::st_remove_holes()
 
 
 # Build donuts -----------------------------------------------------------------
-sf_use_s2(T)
+st_erase <- function(x, y) st_difference(x, st_union(st_combine(y)))
 
-st_erase = function(x, y) st_difference(x, st_union(st_combine(y)))
-
-mpa_50 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(50, "nautical_miles")) %>% 
-  st_make_valid() %>% 
+# 50 nautical miles
+mpa_50 <- select_mpas |> 
+  st_buffer(dist = units::as_units(50, "nautical_miles")) |> 
+  st_make_valid() |> 
   st_erase(select_mpas)
 
-mpa_100 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(100, "nautical_miles")) %>% 
-  st_make_valid() %>%
+# 100 nautical miles
+mpa_100 <- select_mpas |> 
+  st_buffer(dist = units::as_units(100, "nautical_miles")) |> 
+  st_make_valid() |>
   st_erase(st_buffer(select_mpas, dist = units::as_units(50, "nautical_miles")))
 
-mpa_150 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(150, "nautical_miles")) %>% 
-  st_make_valid() %>% 
+# 100 nautical miles
+mpa_150 <- select_mpas |> 
+  st_buffer(dist = units::as_units(150, "nautical_miles")) |> 
+  st_make_valid() |> 
   st_erase(st_buffer(select_mpas, dist = units::as_units(100, "nautical_miles")))
-
-mpa_200 <- select_mpas %>% 
-  st_buffer(dist = units::as_units(200, "nautical_miles")) %>% 
-  st_make_valid() %>% 
+# 150 nautical miles
+mpa_200 <- select_mpas |> 
+  st_buffer(dist = units::as_units(200, "nautical_miles")) |> 
+  st_make_valid() |> 
   st_erase(st_buffer(select_mpas, dist = units::as_units(150, "nautical_miles")))
 
-# Quick check of the polygons
-mapview::mapview(list(mpa_50,
-                      mpa_100,
-                      mpa_150,
-                      mpa_200))
 
 # Function to extract data by buffer
 by_buffer <- function(buffer) {
-  annual_pre_post %>% 
-    filter(between(event, -5, 4)) %>% 
-    select(-src) %>% 
+  annual_pre_post |> 
+    select(-src) |> 
     st_as_sf(coords = c("lon", "lat"),
-             crs = "EPSG:4326") %>%
-    st_filter(mpas,.predicate = st_disjoint) %>% 
-    st_filter(buffer) %>% 
-    st_drop_geometry() %>% 
-    group_by(year, event, wdpaid, name, post) %>%
+             crs = "EPSG:4326") |>
+    st_filter(mpas, .predicate = st_disjoint) |> # Remove points within MPAs
+    st_filter(buffer) |> # Keep points within buffer
+    st_drop_geometry() |> # Remove spatial features
+    group_by(year, event, wdpaid, name, post) |> # Calculate mean by year and donut
     summarize(sets_tot = sum(sets_tot),
               sets_dfad = sum(sets_dfad),
-              .groups = "drop") %>%
-    mutate(dfad_prop_tot = sets_dfad / sets_tot)
+              .groups = "drop") |>
+    mutate(dfad_prop_tot = sets_dfad / sets_tot) # Calculate proportion
 }
 
 dist_gradient <- list(
   mpa_50 = mpa_50,
   mpa_100 = mpa_100,
   mpa_150 = mpa_150,
-  mpa_200 = mpa_200) %>%
-  map_dfr(by_buffer, .id = "ring") %>% 
-  mutate(ring_num = as.numeric(str_extract(ring, "[:digit:]+"))) %>% 
+  mpa_200 = mpa_200) |>
+  map_dfr(by_buffer, .id = "ring") |> 
+  mutate(ring_num = as.numeric(str_extract(ring, "[:digit:]+"))) |> 
   mutate(post = 1 * (post == "After"),
          ring = str_extract(ring, "[:digit:]+"),
-         ring = fct_reorder(ring, ring_num))
+         ring = fct_reorder(ring, ring_num)) |> 
+  mutate(ring = fct_relevel(ring, "200", "150", "100", "50")) |> # Reorderd ring levels with the most distant one as the reference one because we care about changes near the MPA relative to changes far
+  mutate(name = case_when(name == "Ascension Island Marine Protected Area" ~ "Ascensión",
+                          name == "Phoenix Islands Protected Area" ~ "PIPA",
+                          T ~ name))
+# Calculate the BACI-like means manually as a check
+BACI_means <- dist_gradient |> 
+  group_by(name, post, ring_num) |> 
+  summarize(dfad_prop_tot_var = (sd(dfad_prop_tot, na.rm = T)) ^ 2,
+            dfad_prop_tot = mean(dfad_prop_tot, na.rm = T),
+            .groups = "drop") |>
+  pivot_wider(names_from = post,
+              values_from = c(dfad_prop_tot, dfad_prop_tot_var),
+              names_prefix = "post_") |> 
+  mutate(dif = (dfad_prop_tot_post_1 - dfad_prop_tot_post_0),
+         dif_sd = sqrt(dfad_prop_tot_var_post_0 + dfad_prop_tot_var_post_1)) 
+
+## MODELLING ###################################################################
+# Fit models pooling all data
+disc_glob <- feols(dfad_prop_tot ~ post + ring + post:ring | mpa,
+                   data = dist_gradient |> rename(mpa = name) |> mutate(id = paste(mpa, ring)),
+                   panel.id = ~id + year,
+                   vcov = "NW")
+disc <- feols(dfad_prop_tot ~ post + ring + post:ring,
+              data = dist_gradient,
+              panel.id = ~ring + year,
+              vcov = "NW",
+              split = ~name)
+
+modelsummary(list(disc, "Pooled" = disc_glob),
+             title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For poled regression (column 5) standard errors are calculated at the mpa-by-ring-year level.",
+             output = here("results", "tabs", "regression_results.docx"),
+             stars = panelsummary:::econ_stars(),
+             # estimate = "{estimate} ({std.error}){stars}",
+             # statistic = NULL,
+             coef_rename = c("ring50" = "50 nm ring",
+                             "ring100" = "100 nm ring",
+                             "ring150" = "150 nm ring",
+                             "post" = "after",
+                             "(Intercept)" = "Intercept"),
+             gof_omit = "IC|RM|Wi")
+
+# Extract coefficient estiamtes into tables for plotting -----------------------
+global_model <- broom::tidy(disc_glob, conf.int = T) |> 
+  filter(str_detect(term, ":")) |> 
+  mutate(ring = as.numeric(str_extract(term, "[:digit:]+")))
+
+coef_table <- map_dfr(disc, broom::tidy, conf.int = T, .id = "sample") |> 
+  filter(str_detect(term, ":")) |> 
+  mutate(ring = as.numeric(str_extract(term, "[:digit:]+")),
+         sample = str_remove(sample, "sample.var: name; sample: "))
 
 ## VISUALIZE ###################################################################
 
 # X ----------------------------------------------------------------------------
-gradient_plot <- dist_gradient %>% 
-  group_by(name, post, ring_num) %>% 
-  summarize(dfad_prop_tot_var = (sd(dfad_prop_tot, na.rm = T)) ^ 2,
-            dfad_prop_tot = mean(dfad_prop_tot, na.rm = T),
-            .groups = "drop") %>%
-  pivot_wider(names_from = post,
-              values_from = c(dfad_prop_tot, dfad_prop_tot_var),
-              names_prefix = "post_") %>% 
-  mutate(dif = (dfad_prop_tot_post_1 - dfad_prop_tot_post_0),
-         dif_sd = sqrt(dfad_prop_tot_var_post_0 + dfad_prop_tot_var_post_1),
-         name = case_when(name == "Phoenix Islands Protected Area" ~ "PIPA",
-                          name == "Ascension Island Marine Protected Area" ~ "Ascension",
-                          T ~ name)) %>% 
-  ggplot(aes(x = ring_num - 25, y = dif, fill = name, color = name, group = name)) +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  geom_point(size = 3,
+colors <- c("#000000",
+            "#70a0cd",
+            "#c47900",
+            "#b2b2b2")
+
+gradient_plot <- ggplot(data = coef_table,
+                        aes(x = ring, y = estimate)) + 
+  geom_ribbon(data = global_model, aes(x = ring, ymin = conf.low,
+                                       ymax = conf.high),
+              fill = "gray",
+              alpha = 0.5) +
+  geom_ribbon(data = global_model, aes(x = ring, ymin = estimate - std.error,
+                                       ymax = estimate + std.error),
+              fill = "gray",
+              alpha = 0.75) +
+  geom_line(data = global_model, aes(x = ring, y = estimate)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_linerange(aes(ymin = conf.low,
+                     ymax = conf.high,
+                     group = sample),
+                 linewidth = 0.25,
+                 position = position_dodge(width = 5)) +
+  geom_linerange(aes(ymin = estimate - std.error,
+                     ymax = estimate + std.error,
+                     color = sample),
+                 linewidth = 1,
+                 position = position_dodge(width = 5)) +
+  geom_point(aes(fill = sample),
+             size = 3,
+             shape = 21,
              color = "black",
-             pch = 21) +
-  scale_color_viridis_d(option = "viridis",
-                        aesthetics = c("color", "fill")) +
-  scale_y_continuous(labels = scales::percent) +
+             position = position_dodge(width = 5)) +
+  scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
   labs(x = "Distance form MPA boundary (NM)",
        y = "Mean change in dFAD effort",
        fill = "Large-Scale Marine Protected Area",
        color = "Large-Scale Marine Protected Area")
 
 
-ggsave(plot = gradient_plot,
-       filename = "dFAD_gradient_plot.pdf",
-       units = "cm",
-       width = 9.2,
-       height = 6)
-
-dist_gradient %>% 
+dist_gradient |> 
   mutate(post = ifelse(post == 1, "After", "Before"),
-         post = fct_relevel(post, "Before", "After")) %>% 
-  group_by(name, post, ring_num) %>% 
+         post = fct_relevel(post, "Before", "After")) |> 
+  group_by(name, post, ring_num) |> 
   summarize(dfad_prop_tot_sd = sd(dfad_prop_tot, na.rm = T),
             dfad_prop_tot = mean(dfad_prop_tot, na.rm = T),
-            .groups = "drop") %>% 
+            .groups = "drop") |> 
   ggplot(aes(x = ring_num - 25, y = dfad_prop_tot, fill = post, color = post)) +
   geom_pointrange(aes(ymin = dfad_prop_tot - dfad_prop_tot_sd,
                       ymax = dfad_prop_tot + dfad_prop_tot_sd),
@@ -172,26 +214,20 @@ dist_gradient %>%
   guides(fill = guide_legend(override.aes = list(size = 1))) +
   labs(x = "Distance form MPA boundary",
        y = "%Change in mean relative dFAD effort",
-       fill = "MPA",
-       color = "MPA",
-       linetype = "Period") +
+       fill = "Period",
+       color = "Period") +
   theme(legend.position = "inside",
         legend.position.inside = c(0.1, 0.6),
         legend.justification.inside = c(0, 0)) +
   facet_wrap(~name, scales = "free")
-  
-dist_gradient %>% 
-  group_by(name, post, ring_num) %>% 
-  summarize(sets_dfad = mean(sets_dfad, na.rm = T)) %>%
-  pivot_wider(names_from = post,
-              values_from = sets_dfad,
-              names_prefix = "post_") %>% 
-  mutate(dif = (post_1 - post_0)) %>% 
-  ggplot(aes(x = ring_num - 25, y = dif, color = name)) +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  geom_point(size = 3) +
-  theme_linedraw(base_size = 10) +
-  theme(legend.position = "bottom") +
-  labs(x = "Distance form MPA boundary",
-       y = "Change in dFAD sets")
+
+
+## EXPORT ######################################################################
+
+ggsave(plot = gradient_plot,
+       filename = here("results", "figs", "dFAD_gradient_plot.pdf"),
+       units = "cm",
+       width = 9.2,
+       height = 6)
+
+
