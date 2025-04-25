@@ -155,8 +155,8 @@ coef_table <- map_dfr(disc, broom::tidy, conf.int = T, .id = "sample") |>
 
 # X ----------------------------------------------------------------------------
 colors <- c("#000000",
-            "#70a0cd",
-            "#c47900",
+            "#4941a8",
+            "#8e2c28",
             "#b2b2b2")
 
 gradient_plot <- ggplot(data = coef_table,

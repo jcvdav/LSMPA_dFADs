@@ -135,7 +135,7 @@ before_after_plot <- function(data, hack = F) {
   pre_post <- ggplot() +
     geom_tile(data = data,
               aes(x = lon, y = lat, fill = fad_pct_of_total)) +
-    geom_sf(data = this_mpa, fill = scales::muted("red"), color = "black") +
+    geom_sf(data = this_mpa, fill = "gray50", color = "black") +
     geom_sf(data = this_buffer, fill = "transparent", color = "black") +
     geom_sf_text(data = means, aes(label = m),
                  color = "white",
@@ -191,13 +191,17 @@ change_plot <- function(data, hack = F) {
            strip = "After - Before") |> 
     ggplot() +
     geom_tile(aes(x = lon, y = lat, fill = delta)) +
-    geom_sf(data = this_mpa, fill = scales::muted("red"), color = "black") +
+    geom_sf(data = this_mpa, fill = "gray50", color = "black") +
     geom_sf(data = this_buffer, fill = "transparent", color = "black") +
     geom_sf_text(data = dif_means, aes(label = dif),
                  color = "white",
                  size = 2) +
     facet_wrap(~strip) +
     scale_fill_gradient2(name = "Change",
+                         low = scales::muted("blue"),
+                         mid = "white",
+                         high = scales::muted("red"),
+                         midpoint = 0,
                          limits = c(-1, 1),
                          labels = scales::percent,
                          guide = guide_colorbar(frame.colour = "black",

@@ -37,7 +37,7 @@ theme_set(theme_linedraw(base_size = 9) +
                   legend.key.width = unit(30, "pt"),
                   legend.key.height = unit(10, "pt"),
                   legend.box.spacing = element_blank(),
-                  panel.spacing = element_blank(),,
+                  panel.spacing = element_blank(),
                   legend.title = element_text(hjust = 0.5)))
 
 # Load data --------------------------------------------------------------------
@@ -98,10 +98,11 @@ main_map <- ggplot() +
                                               ticks.colour = "black"),
                        na.value = "transparent") +
   theme(legend.title.position = "top") +
-  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.major = element_blank(),
+        panel.border = element_blank()) +
   geom_sf(data = mpas,
-          fill = scales::muted("red"),
-          color = scales::muted("red"),
+          fill = "gray50",
+          color = "gray50",
           linewidth = 0.1) +
   geom_sf(data = buffered_mpas,
           fill = "transparent",

@@ -13,6 +13,8 @@
 ## SET UP ######################################################################
 
 # Load packages ----------------------------------------------------------------
+library(here)
+library(tidyverse)
 
 # Load data --------------------------------------------------------------------
 gfw_ps_effort <- readRDS(here("processed_data", "annual_gfw_tuna_ps_effort_1deg.rds"))
@@ -54,13 +56,13 @@ gof <- feols(n_vessels_p3m1 ~ sets_dfad,
 ggplot(data = combined,
        aes(x = sets_dfad,
            y = n_vessels_p3m1,
-           color = hemisphere)) +
+           color = hemisphere,
+           group = hemisphere)) +
   geom_abline(intercept = 0,
               slope = 1,
               linetype = "dashed") +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm",
-              color = "red") +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "lm") +
   geom_text(data = gof,
             aes(x = 200, y = 700,
                 label = string),
