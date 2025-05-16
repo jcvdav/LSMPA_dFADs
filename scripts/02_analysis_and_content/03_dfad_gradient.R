@@ -62,12 +62,13 @@ mpa_100 <- select_mpas |>
   st_make_valid() |>
   st_erase(st_buffer(select_mpas, dist = units::as_units(50, "nautical_miles")))
 
-# 100 nautical miles
+# 150 nautical miles
 mpa_150 <- select_mpas |> 
   st_buffer(dist = units::as_units(150, "nautical_miles")) |> 
   st_make_valid() |> 
   st_erase(st_buffer(select_mpas, dist = units::as_units(100, "nautical_miles")))
-# 150 nautical miles
+
+# 200 nautical miles
 mpa_200 <- select_mpas |> 
   st_buffer(dist = units::as_units(200, "nautical_miles")) |> 
   st_make_valid() |> 
@@ -91,6 +92,7 @@ by_buffer <- function(buffer) {
     mutate(dfad_prop_tot = sets_dfad / sets_tot) # Calculate proportion
 }
 
+# Build the data set -----------------------------------------------------------
 dist_gradient <- list(
   mpa_50 = mpa_50,
   mpa_100 = mpa_100,

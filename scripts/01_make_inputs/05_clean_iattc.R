@@ -7,7 +7,9 @@
 # date
 #
 # Description
-#
+# Downloaded from: https://www.iattc.org/en-US/Data/Public-domain
+# Downloaded on Dec 12, 2024
+# Metadata available in PSTuna-Atun.pdf in the same folder
 ################################################################################
 
 ## SET UP ######################################################################

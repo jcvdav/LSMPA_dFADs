@@ -1,15 +1,36 @@
+################################################################################
+# title
+################################################################################
+#
+# Juan Carlos Villaseñor-Derbez
+# jc_villasenor@miami.edu
+# date
+#
+# Description
+# Downloaded from https://www.iccat.int/en/accesingdb.HTML (V20230131)
+# # Metadata provided in t2ce-ENG.pdf
+################################################################################
+
+## SET UP ######################################################################
+
+# Load packages ----------------------------------------------------------------
 pacman::p_load(
   here,
   tidyverse,
   janitor
 )
 
+
+# Load data --------------------------------------------------------------------
 con <- readRDS(file = here("raw_data/rfmo_data/ICCAT/ICCAT_database.rds"))
 
 # Extract the data
 data <- con$t2ce %>%
   clean_names()
 
+## PROCESSING ##################################################################
+
+# X ----------------------------------------------------------------------------
 annual_iccat <- data %>%
   filter(gear_code %in% c(
     "PS",     #Purse seine
@@ -85,4 +106,8 @@ annual_iccat <- data %>%
          src = "iccat")
 
 
+
+## EXPORT ######################################################################
+
+# X ----------------------------------------------------------------------------
 saveRDS(annual_iccat, file = here("processed_data", "annual_iccat_effort_1deg.rds"))
