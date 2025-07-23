@@ -308,19 +308,6 @@ means <- cowplot::plot_grid(mean_measures,
 
 
 ## EXPORT ######################################################################
-
-ggsave(plot = gradient_plot,
-       filename = here("results", "figs", "dFAD_gradient_plot_0_100_200.pdf"),
-       units = "cm",
-       width = 9.2,
-       height = 6)
-
-ggsave(plot = abs_gradient_plot,
-       filename = here("results", "figs", "abs_dFAD_gradient_plot_0_100_200.pdf"),
-       units = "cm",
-       width = 9.2,
-       height = 6)
-
 ggsave(plot = means,
        filename = here("results", "figs", "dFAD_effort_by_ring_0_100_200.pdf"),
        units = "cm",
