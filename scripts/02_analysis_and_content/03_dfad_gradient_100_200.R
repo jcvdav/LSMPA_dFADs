@@ -139,7 +139,7 @@ etable(abs_disc_glob, abs_disc)
 
 modelsummary(list(disc, "Pooled" = disc_glob),
              title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For poled regression (column 5) standard errors are calculated at the mpa-by-ring-year level.",
-             # output = here("results", "tabs", "regression_results.docx"),
+             output = here("results", "tabs", "regression_results_0_100_200.docx"),
              stars = panelsummary:::econ_stars(),
              coef_rename = c("ring50" = "50 nm ring",
                              "ring100" = "100 nm ring",
@@ -266,7 +266,7 @@ mean_measures <- dist_gradient |>
   scale_y_continuous(labels = scales::percent) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
   labs(x = "Distance form MPA boundary",
-       y = "Change in relative dFAD effort",
+       y = "Relative dFAD effort",
        fill = "Period",
        color = "Period") +
   theme(legend.position = "inside",
@@ -294,7 +294,7 @@ abs_mean_measures <- dist_gradient |>
   scale_color_viridis_d(option = "cividis", aesthetics = c("color", "fill")) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
   labs(x = "Distance form MPA boundary",
-       y = "Change in dFAD effort",
+       y = "dFAD effort",
        fill = "Period",
        color = "Period") +
   theme(legend.position = "None") +
@@ -306,3 +306,23 @@ means <- cowplot::plot_grid(mean_measures,
                             labels = "AUTO",
                             ncol = 1)
 
+
+## EXPORT ######################################################################
+
+ggsave(plot = gradient_plot,
+       filename = here("results", "figs", "dFAD_gradient_plot_0_100_200.pdf"),
+       units = "cm",
+       width = 9.2,
+       height = 6)
+
+ggsave(plot = abs_gradient_plot,
+       filename = here("results", "figs", "abs_dFAD_gradient_plot_0_100_200.pdf"),
+       units = "cm",
+       width = 9.2,
+       height = 6)
+
+ggsave(plot = means,
+       filename = here("results", "figs", "dFAD_effort_by_ring_0_100_200.pdf"),
+       units = "cm",
+       width = 20,
+       height = 20)
