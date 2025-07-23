@@ -219,7 +219,7 @@ gradient_plot <- ggplot(data = coef_table,
   scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Distance form MPA boundary (NM)",
-       y = "Change in dFAD effort\n(percentage points)",
+       y = "Change in prop. dFAD effort\n(percentage points)",
        fill = "Large-Scale Marine Protected Area",
        color = "Large-Scale Marine Protected Area")
 
@@ -278,7 +278,7 @@ mean_measures <- dist_gradient |>
   scale_y_continuous(labels = scales::percent) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
   labs(x = "Distance form MPA boundary",
-       y = "Change in relative dFAD effort",
+       y = "Relative dFAD effort",
        fill = "Period",
        color = "Period") +
   theme(legend.position = "inside",
@@ -306,7 +306,7 @@ abs_mean_measures <- dist_gradient |>
   scale_color_viridis_d(option = "cividis", aesthetics = c("color", "fill")) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
   labs(x = "Distance form MPA boundary",
-       y = "Change in dFAD effort",
+       y = "dFAD effort",
        fill = "Period",
        color = "Period") +
   theme(legend.position = "None") +
