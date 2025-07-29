@@ -265,7 +265,7 @@ mean_measures <- dist_gradient |>
   scale_color_viridis_d(option = "cividis", aesthetics = c("color", "fill")) +
   scale_y_continuous(labels = scales::percent) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
-  labs(x = "Distance form MPA boundary",
+  labs(x = "Distance form MPA boundary (nm)",
        y = "Relative dFAD effort",
        fill = "Period",
        color = "Period") +
@@ -293,7 +293,7 @@ abs_mean_measures <- dist_gradient |>
   theme_linedraw(base_size = 10) +
   scale_color_viridis_d(option = "cividis", aesthetics = c("color", "fill")) +
   guides(fill = guide_legend(override.aes = list(size = 1))) +
-  labs(x = "Distance form MPA boundary",
+  labs(x = "Distance form MPA boundary (nm)",
        y = "dFAD effort",
        fill = "Period",
        color = "Period") +
