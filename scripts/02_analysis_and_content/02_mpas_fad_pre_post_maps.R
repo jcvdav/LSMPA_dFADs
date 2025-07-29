@@ -88,11 +88,6 @@ buf_200 <- select_mpas |>
   mutate(dist_200 = 1) |>
   select(dist_200, wdpaid, name, year_enforced)
 
-buf_100 <- select_mpas |> 
-  st_buffer(dist = units::as_units(100, "nautical_mile")) |> 
-  mutate(dist_100 = 1) |>
-  select(dist_100, wdpaid, name, year_enforced)
-
 # Work with catch and effort data ----------------------------------------------
 annual_pre_post <- rfmo_data |> 
   st_as_sf(coords = c("lon", "lat"),
@@ -126,7 +121,6 @@ saveRDS(pre_post, file = here("processed_data/pre_post_activity_by_select_mpa.rd
 before_after_plot <- function(data, hack = F) {
   # Take all of the MPAs and buffers and keep only the one we are plotting
   this_mpa <- filter(select_mpas, wdpaid == data$wdpaid[1])
-  this_buffer_100 <- filter(buf_100, wdpaid == data$wdpaid[1])
   this_buffer_200 <- filter(buf_200, wdpaid == data$wdpaid[1])
   
   # # Calculate % to overlay as text on the Beofre and After plot
@@ -142,7 +136,6 @@ before_after_plot <- function(data, hack = F) {
     geom_tile(data = data,
               aes(x = lon, y = lat, fill = fad_pct_of_total)) +
     geom_sf(data = this_mpa, fill = "gray50", color = "black") +
-    geom_sf(data = this_buffer_100, fill = "transparent", color = "black") +
     geom_sf(data = this_buffer_200, fill = "transparent", color = "black") +
     geom_sf_text(data = means, aes(label = m),
                  color = "white",
@@ -175,7 +168,6 @@ before_after_plot <- function(data, hack = F) {
 change_plot <- function(data, hack = F) {
   # Take all of the MPAs and buffers and keep only the one we are plotting
   this_mpa <- filter(select_mpas, wdpaid == data$wdpaid[1])
-  this_buffer_100 <- filter(buf_100, wdpaid == data$wdpaid[1])
   this_buffer_200 <- filter(buf_200, wdpaid == data$wdpaid[1])
   
   # Change in means to overlay on the Difference plot
@@ -202,7 +194,6 @@ change_plot <- function(data, hack = F) {
     ggplot() +
     geom_tile(aes(x = lon, y = lat, fill = delta)) +
     geom_sf(data = this_mpa, fill = "gray50", color = "black") +
-    geom_sf(data = this_buffer_100, fill = "transparent", color = "black") +
     geom_sf(data = this_buffer_200, fill = "transparent", color = "black") +
     geom_sf_text(data = dif_means, aes(label = dif),
                  color = "white",

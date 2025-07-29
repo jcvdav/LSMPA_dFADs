@@ -50,30 +50,17 @@ select_mpas <- mpas |>
 # Build donuts -----------------------------------------------------------------
 st_erase <- function(x, y) st_difference(x, st_union(st_combine(y)))
 
-# 50 nautical miles
-mpa_50 <- select_mpas |> 
-  st_buffer(dist = units::as_units(50, "nautical_miles")) |> 
-  st_make_valid() |> 
-  st_erase(select_mpas)
-
 # 100 nautical miles
 mpa_100 <- select_mpas |> 
   st_buffer(dist = units::as_units(100, "nautical_miles")) |> 
   st_make_valid() |>
-  st_erase(st_buffer(select_mpas, dist = units::as_units(50, "nautical_miles")))
-
-# 150 nautical miles
-mpa_150 <- select_mpas |> 
-  st_buffer(dist = units::as_units(150, "nautical_miles")) |> 
-  st_make_valid() |> 
-  st_erase(st_buffer(select_mpas, dist = units::as_units(100, "nautical_miles")))
+  st_erase(select_mpas)
 
 # 200 nautical miles
 mpa_200 <- select_mpas |> 
   st_buffer(dist = units::as_units(200, "nautical_miles")) |> 
   st_make_valid() |> 
-  st_erase(st_buffer(select_mpas, dist = units::as_units(150, "nautical_miles")))
-
+  st_erase(st_buffer(select_mpas, dist = units::as_units(100, "nautical_miles")))
 
 # Function to extract data by buffer
 by_buffer <- function(buffer) {
@@ -94,16 +81,16 @@ by_buffer <- function(buffer) {
 
 # Build the data set -----------------------------------------------------------
 dist_gradient <- list(
-  mpa_50 = mpa_50,
+  # mpa_50 = mpa_50,
   mpa_100 = mpa_100,
-  mpa_150 = mpa_150,
+  # mpa_150 = mpa_150,
   mpa_200 = mpa_200) |>
   map_dfr(by_buffer, .id = "ring") |> 
   mutate(ring_num = as.numeric(str_extract(ring, "[:digit:]+"))) |> 
   mutate(post = 1 * (post == "After"),
          ring = str_extract(ring, "[:digit:]+"),
          ring = fct_reorder(ring, ring_num)) |> 
-  mutate(ring = fct_relevel(ring, "200", "150", "100", "50")) |> # Reorderd ring levels with the most distant one as the reference one because we care about changes near the MPA relative to changes far
+  mutate(ring = fct_relevel(ring, "200", "100")) |> # Reorderd ring levels with the most distant one as the reference one because we care about changes near the MPA relative to changes far
   mutate(name = case_when(name == "Ascension Island Marine Protected Area" ~ "Ascensión",
                           name == "Phoenix Islands Protected Area" ~ "PIPA",
                           T ~ name))
@@ -136,15 +123,15 @@ etable(disc_glob, disc)
 
 # Now absolute sets
 abs_disc_glob <- feols(sets_dfad ~ post + ring + post:ring | mpa,
-                   data = dist_gradient |> rename(mpa = name) |> mutate(id = paste(mpa, ring)),
-                   panel.id = ~id + year,
-                   vcov = "NW")
+                       data = dist_gradient |> rename(mpa = name) |> mutate(id = paste(mpa, ring)),
+                       panel.id = ~id + year,
+                       vcov = "NW")
 
 abs_disc <- feols(sets_dfad ~ post + ring + post:ring,
-              data = dist_gradient,
-              panel.id = ~ring + year,
-              vcov = "NW",
-              split = ~name)
+                  data = dist_gradient,
+                  panel.id = ~ring + year,
+                  vcov = "NW",
+                  split = ~name)
 
 etable(abs_disc_glob, abs_disc)
 
@@ -152,7 +139,7 @@ etable(abs_disc_glob, abs_disc)
 
 modelsummary(list(disc, "Pooled" = disc_glob),
              title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For poled regression (column 5) standard errors are calculated at the mpa-by-ring-year level.",
-             output = here("results", "tabs", "regression_results.docx"),
+             output = here("results", "tabs", "regression_results_0_100_200.docx"),
              stars = panelsummary:::econ_stars(),
              coef_rename = c("ring50" = "50 nm ring",
                              "ring100" = "100 nm ring",
@@ -184,77 +171,78 @@ abs_coef_table <- map_dfr(abs_disc, broom::tidy, conf.int = T, .id = "sample") |
 ## VISUALIZE ###################################################################
 
 # X ----------------------------------------------------------------------------
-colors <- c("#000000",
-            "#4941a8",
-            "#8e2c28",
-            "#b2b2b2")
-
-gradient_plot <- ggplot(data = coef_table,
-                        aes(x = ring, y = estimate)) + 
-  geom_ribbon(data = global_model, aes(x = ring, ymin = conf.low,
-                                       ymax = conf.high),
-              fill = "gray",
-              alpha = 0.5) +
-  geom_ribbon(data = global_model, aes(x = ring, ymin = estimate - std.error,
-                                       ymax = estimate + std.error),
-              fill = "gray",
-              alpha = 0.75) +
-  geom_line(data = global_model, aes(x = ring, y = estimate)) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_linerange(aes(ymin = conf.low,
-                     ymax = conf.high,
-                     group = sample),
-                 linewidth = 0.25,
-                 position = position_dodge(width = 5)) +
-  geom_linerange(aes(ymin = estimate - std.error,
-                     ymax = estimate + std.error,
-                     color = sample),
-                 linewidth = 1,
-                 position = position_dodge(width = 5)) +
-  geom_point(aes(fill = sample),
-             size = 3,
-             shape = 21,
-             color = "black",
-             position = position_dodge(width = 5)) +
-  scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(x = "Distance form MPA boundary (NM)",
-       y = "Change in prop. dFAD effort\n(percentage points)",
-       fill = "Large-Scale Marine Protected Area",
-       color = "Large-Scale Marine Protected Area")
-
-abs_gradient_plot <- ggplot(data = abs_coef_table,
-                        aes(x = ring, y = estimate)) + 
-  geom_ribbon(data = abs_global_model, aes(x = ring, ymin = conf.low,
-                                       ymax = conf.high),
-              fill = "gray",
-              alpha = 0.5) +
-  geom_ribbon(data = abs_global_model, aes(x = ring, ymin = estimate - std.error,
-                                       ymax = estimate + std.error),
-              fill = "gray",
-              alpha = 0.75) +
-  geom_line(data = abs_global_model, aes(x = ring, y = estimate)) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_linerange(aes(ymin = conf.low,
-                     ymax = conf.high,
-                     group = sample),
-                 linewidth = 0.25,
-                 position = position_dodge(width = 5)) +
-  geom_linerange(aes(ymin = estimate - std.error,
-                     ymax = estimate + std.error,
-                     color = sample),
-                 linewidth = 1,
-                 position = position_dodge(width = 5)) +
-  geom_point(aes(fill = sample),
-             size = 3,
-             shape = 21,
-             color = "black",
-             position = position_dodge(width = 5)) +
-  scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
-  labs(x = "Distance form MPA boundary (NM)",
-       y = "Change in dFAD effort (# sets)",
-       fill = "Large-Scale Marine Protected Area",
-       color = "Large-Scale Marine Protected Area")
+# These "gradient" plots cannot be built because there is only one coefficient per MPA (post:100), so a gradient cannot be visualized
+# colors <- c("#000000",
+#             "#4941a8",
+#             "#8e2c28",
+#             "#b2b2b2")
+# 
+# gradient_plot <- ggplot(data = coef_table,
+#                         aes(x = ring, y = estimate)) + 
+#   geom_ribbon(data = global_model, aes(x = ring, ymin = conf.low,
+#                                        ymax = conf.high),
+#               fill = "gray",
+#               alpha = 0.5) +
+#   geom_ribbon(data = global_model, aes(x = ring, ymin = estimate - std.error,
+#                                        ymax = estimate + std.error),
+#               fill = "gray",
+#               alpha = 0.75) +
+#   geom_line(data = global_model, aes(x = ring, y = estimate)) +
+#   geom_hline(yintercept = 0, linetype = "dashed") +
+#   geom_linerange(aes(ymin = conf.low,
+#                      ymax = conf.high,
+#                      group = sample),
+#                  linewidth = 0.25,
+#                  position = position_dodge(width = 5)) +
+#   geom_linerange(aes(ymin = estimate - std.error,
+#                      ymax = estimate + std.error,
+#                      color = sample),
+#                  linewidth = 1,
+#                  position = position_dodge(width = 5)) +
+#   geom_point(aes(fill = sample),
+#              size = 3,
+#              shape = 21,
+#              color = "black",
+#              position = position_dodge(width = 5)) +
+#   scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
+#   scale_y_continuous(labels = scales::percent) +
+#   labs(x = "Distance form MPA boundary (NM)",
+#        y = "Change in dFAD effort\n(percentage points)",
+#        fill = "Large-Scale Marine Protected Area",
+#        color = "Large-Scale Marine Protected Area")
+# 
+# abs_gradient_plot <- ggplot(data = abs_coef_table,
+#                             aes(x = ring, y = estimate)) + 
+#   geom_ribbon(data = abs_global_model, aes(x = ring, ymin = conf.low,
+#                                            ymax = conf.high),
+#               fill = "gray",
+#               alpha = 0.5) +
+#   geom_ribbon(data = abs_global_model, aes(x = ring, ymin = estimate - std.error,
+#                                            ymax = estimate + std.error),
+#               fill = "gray",
+#               alpha = 0.75) +
+#   geom_line(data = abs_global_model, aes(x = ring, y = estimate)) +
+#   geom_hline(yintercept = 0, linetype = "dashed") +
+#   geom_linerange(aes(ymin = conf.low,
+#                      ymax = conf.high,
+#                      group = sample),
+#                  linewidth = 0.25,
+#                  position = position_dodge(width = 5)) +
+#   geom_linerange(aes(ymin = estimate - std.error,
+#                      ymax = estimate + std.error,
+#                      color = sample),
+#                  linewidth = 1,
+#                  position = position_dodge(width = 5)) +
+#   geom_point(aes(fill = sample),
+#              size = 3,
+#              shape = 21,
+#              color = "black",
+#              position = position_dodge(width = 5)) +
+#   scale_color_manual(values = colors, aesthetics = c("fill", "colour")) +
+#   labs(x = "Distance form MPA boundary (NM)",
+#        y = "Change in dFAD effort (# sets)",
+#        fill = "Large-Scale Marine Protected Area",
+#        color = "Large-Scale Marine Protected Area")
 
 
 mean_measures <- dist_gradient |> 
@@ -320,23 +308,8 @@ means <- cowplot::plot_grid(mean_measures,
 
 
 ## EXPORT ######################################################################
-
-ggsave(plot = gradient_plot,
-       filename = here("results", "figs", "dFAD_gradient_plot.pdf"),
-       units = "cm",
-       width = 9.2,
-       height = 6)
-
-ggsave(plot = abs_gradient_plot,
-       filename = here("results", "figs", "abs_dFAD_gradient_plot.pdf"),
-       units = "cm",
-       width = 9.2,
-       height = 6)
-
 ggsave(plot = means,
-       filename = here("results", "figs", "dFAD_effort_by_ring.pdf"),
+       filename = here("results", "figs", "dFAD_effort_by_ring_0_100_200.pdf"),
        units = "cm",
        width = 20,
        height = 20)
-
-
