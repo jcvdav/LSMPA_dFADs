@@ -62,6 +62,12 @@ mpa_200 <- select_mpas |>
   st_make_valid() |> 
   st_erase(st_buffer(select_mpas, dist = units::as_units(100, "nautical_miles")))
 
+rings <- bind_rows(
+  mpa_100 |> mutate(near = 1),
+  mpa_200 |> mutate(near = 0)
+) |> 
+  select(-a)
+
 # Function to extract data by buffer
 by_buffer <- function(buffer) {
   annual_pre_post |> 
@@ -94,6 +100,20 @@ dist_gradient <- list(
   mutate(name = case_when(name == "Ascension Island Marine Protected Area" ~ "Ascensión",
                           name == "Phoenix Islands Protected Area" ~ "PIPA",
                           T ~ name))
+
+# Build data set by pixel ------------------------------------------------------
+pixel <- annual_pre_post |> 
+  select(year, lon, lat, contains("tot"), contains("dfad"), src, post, event) |> 
+  mutate(id = paste(lon, lat, sep = "_"),
+         post = ifelse(post == "After", 1, 0)) |> 
+  st_as_sf(coords = c("lon", "lat"),
+           crs = "EPSG:4326",
+           remove = F) |>
+  st_filter(mpas, .predicate = st_disjoint) |> # remove points inside the MPA
+  st_join(rings) |> 
+  drop_na(near) |> 
+  st_drop_geometry()
+
 # Calculate the BACI-like means manually as a check
 BACI_means <- dist_gradient |> 
   group_by(name, post, ring_num) |> 
@@ -121,6 +141,19 @@ disc <- feols(dfad_prop_tot ~ post + ring + post:ring,
 
 etable(disc_glob, disc)
 
+# Fir models witrh %dFAD sets but nwo by pixel
+disc_pixel <- feols(dfad_prop_tot ~ post + near + post:near,
+                    data = pixel,
+                    panel.id = ~id + year,
+                    vcov = "NW",
+                    split = ~name)
+
+disc_pixel_fe <- feols(dfad_prop_tot ~ post + near + post:near | id + year,
+                    data = pixel,
+                    panel.id = ~id + year,
+                    vcov = "NW",
+                    split = ~name)
+
 # Now absolute sets
 abs_disc_glob <- feols(sets_dfad ~ post + ring + post:ring | mpa,
                        data = dist_gradient |> rename(mpa = name) |> mutate(id = paste(mpa, ring)),
@@ -135,8 +168,7 @@ abs_disc <- feols(sets_dfad ~ post + ring + post:ring,
 
 etable(abs_disc_glob, abs_disc)
 
-## Build regression table
-
+## Build regression tables -----------------------------------------------------
 modelsummary(list(disc, "Pooled" = disc_glob),
              title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For poled regression (column 5) standard errors are calculated at the mpa-by-ring-year level.",
              output = here("results", "tabs", "regression_results_0_100_200.docx"),
@@ -146,6 +178,14 @@ modelsummary(list(disc, "Pooled" = disc_glob),
                              "ring150" = "150 nm ring",
                              "post" = "after",
                              "(Intercept)" = "Intercept"),
+             gof_omit = "IC|RM|Wi")
+
+# Pixel-level table
+modelsummary(list("Basic DID" = disc_pixel,
+                  "Fixed effects byyear and pixel" = disc_pixel_fe),
+             output = here("results", "tabs", "regression_results_pixel_near_far.docx"),
+             shape = "rbind",
+             stars = panelsummary:::econ_stars(),
              gof_omit = "IC|RM|Wi")
 
 # Extract coefficient estiamtes into tables for plotting -----------------------
