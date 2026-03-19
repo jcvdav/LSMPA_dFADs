@@ -26,7 +26,6 @@ theme_set(theme_linedraw(base_size = 8) +
                                       color = 'black'),
                   legend.position = "top",
                   legend.title.position = "top",
-                  legend.box.spacing = element_blank(),
                   legend.title = element_text(hjust = 0.5)))
 
 # Load data --------------------------------------------------------------------
@@ -149,9 +148,12 @@ abs_disc <- feols(sets_dfad ~ post + ring + post:ring,
 etable(abs_disc_glob, abs_disc)
 
 ## Build regression table
-
-modelsummary(list(disc, "Pooled" = disc_glob),
-             title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For poled regression (column 5) standard errors are calculated at the mpa-by-ring-year level.",
+modelsummary(list("Asención" = disc[[1]],
+                  "Galápagos" = disc[[2]],
+                  "PIPA" = disc[[3]],
+                  "Revillagigedo" = disc[[4]],
+                  "Pooled" = disc_glob),
+             title = "Coefficient estimates for linear model testing for changes in %dFAD effort near MPA boundaries. Numbers in parentheses are panel-robust standard errors. For MPA-level regressions (columns 1-4), standard errors are calculated at the ring-by-year level. For pooled regression (column 5) standard errors are calculated at the MPA-by-ring-year level.",
              output = here("results", "tabs", "regression_results.docx"),
              stars = panelsummary:::econ_stars(),
              coef_rename = c("ring50" = "50 nm ring",
@@ -267,8 +269,7 @@ mean_measures <- dist_gradient |>
   ggplot(aes(x = ring_num - 25, y = dfad_prop_tot, fill = post, color = post)) +
   geom_pointrange(aes(ymin = dfad_prop_tot - dfad_prop_tot_sd,
                       ymax = dfad_prop_tot + dfad_prop_tot_sd),
-                  fatten = 1,
-                  size = 3,
+                  size = 1,
                   pch = 21,
                   color = "black") +
   geom_line() +
@@ -296,8 +297,7 @@ abs_mean_measures <- dist_gradient |>
   ggplot(aes(x = ring_num - 25, y = dfad, fill = post, color = post)) +
   geom_pointrange(aes(ymin = dfad - dfad,
                       ymax = dfad + dfad),
-                  fatten = 1,
-                  size = 3,
+                  size = 1,
                   pch = 21,
                   color = "black") +
   geom_line() +
@@ -324,18 +324,21 @@ means <- cowplot::plot_grid(mean_measures,
 ggsave(plot = gradient_plot,
        filename = here("results", "figs", "dFAD_gradient_plot.pdf"),
        units = "cm",
+       dpi = 600,
        width = 9.2,
        height = 6)
 
 ggsave(plot = abs_gradient_plot,
        filename = here("results", "figs", "abs_dFAD_gradient_plot.pdf"),
        units = "cm",
+       dpi = 600,
        width = 9.2,
        height = 6)
 
 ggsave(plot = means,
        filename = here("results", "figs", "dFAD_effort_by_ring.pdf"),
        units = "cm",
+       dpi = 600,
        width = 20,
        height = 20)
 
