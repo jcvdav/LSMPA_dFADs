@@ -36,7 +36,6 @@ theme_set(theme_linedraw(base_size = 9) +
                   legend.background = element_blank(),
                   legend.key.width = unit(30, "pt"),
                   legend.key.height = unit(10, "pt"),
-                  legend.box.spacing = element_blank(),
                   panel.spacing = element_blank(),
                   legend.title = element_text(hjust = 0.5)))
 
@@ -125,5 +124,6 @@ main_map <- ggplot() +
 ggsave(plot = main_map,
        filename = here("results", "figs", "global_map_of_dfad_effort_and_mpas.pdf"),
        units = "cm",
+       dpi = 600,
        width = 9.2,
        height = 6)

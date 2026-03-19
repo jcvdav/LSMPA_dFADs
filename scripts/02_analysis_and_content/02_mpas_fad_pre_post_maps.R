@@ -36,7 +36,6 @@ theme_set(theme_linedraw(base_size = 8) +
                   legend.background = element_blank(),
                   legend.key.width = unit(15, "pt"),
                   legend.key.height = unit(10, "pt"),
-                  legend.box.spacing = element_blank(),
                   legend.title = element_text(hjust = 0.5),
                   legend.title.position = "top",
                   strip.background = element_rect(fill = "transparent"),
@@ -270,11 +269,13 @@ final_change_plot <- cowplot::plot_grid(legend_change,
 ggsave(plot = final_pre_post_plot,
        filename = here("results", "figs", "mpas_fad_pre_post.pdf"),
        units = "cm",
+       dpi = 600,
        width = 6,
        height = 12)
 
 ggsave(plot = final_change_plot,
        filename = here("results", "figs", "mpas_fad_dif.pdf"),
        units = "cm",
-       width = 3,
+       dpi = 600,
+       width = 3.2,
        height = 12)
