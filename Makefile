@@ -1,7 +1,8 @@
-all: figures tables
+all: figures tables supp_figures supp_tables
 figures: results/figs/global_map_of_dfad_effort_and_mpas.pdf results/figs/dFAD_gradient_plot.pdf results/figs/mpas_fad_dif.pdf results/figs/mpas_fad_pre_post.pdf
 tables: results/tabs/regression_results.docx
-supp_figures: results/figs/time_series.pdf results/figs/dFAD_effort_by_ring.pdf results/figs/abs_dFAD_gradient_plot.pdf
+supp_figures: results/figs/time_series.pdf results/figs/dFAD_effort_by_ring.pdf results/figs/abs_dFAD_gradient_plot.pdf results/figs/dFAD_effort_by_ring_0_100_200.pdf
+supp_tables: results/tabs/regression_results_0_100_200.docx results/tabs/regression_results_pixel_near_far.docx
 
 processed_data: processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 
@@ -15,19 +16,22 @@ results/figs/mpas_fad_dif.pdf: scripts/02_analysis_and_content/02_mpas_fad_pre_p
 results/figs/mpas_fad_pre_post.pdf: scripts/02_analysis_and_content/02_mpas_fad_pre_post_maps.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 		
-results/figs/dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/abs_dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/abs_dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/dFAD_effort_by_ring.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/dFAD_effort_by_ring.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/time_series.pdf: scripts/02_analysis_and_content/04_time_series.R processed_data/annual_rfmo_effort_1deg.rds
+results/figs/time_series.pdf: scripts/02_analysis_and_content/05_time_series.R processed_data/annual_rfmo_effort_1deg.rds
 		cd $(<D); Rscript $(<F)
 
-results/tabs/regression_results.docx: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/tabs/regression_results.docx: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+		cd $(<D); Rscript $(<F)
+
+results/figs/dFAD_effort_by_ring_0_100_200.pdf results/tabs/regression_results_0_100_200.docx results/tabs/regression_results_pixel_near_far.docx: scripts/02_analysis_and_content/03_dfad_gradient_100_200.R processed_data/annual_pre_post_activity_by_select_mpa.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
 # Analysis
