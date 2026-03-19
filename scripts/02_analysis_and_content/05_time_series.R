@@ -22,7 +22,6 @@ theme_set(theme_linedraw(base_size = 9) +
             theme(text = element_text(family = "Helvetica",
                                       color = 'black'),
                   legend.position = "inside",
-                  legend.background = element_blank(),
                   legend.title = element_text(hjust = 0.5),
                   legend.position.inside = c(0, 1),
                   legend.justification.inside = c(0, 1)))
@@ -80,5 +79,6 @@ p <- cowplot::plot_grid(rel, abs, labels = "AUTO")
 ggsave(plot = p,
        filename = here("results", "figs", "time_series.pdf"),
        units = "cm",
+       dpi = 600,
        width = 18,
        height = 6.5)
