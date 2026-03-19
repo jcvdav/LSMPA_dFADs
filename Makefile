@@ -15,19 +15,19 @@ results/figs/mpas_fad_dif.pdf: scripts/02_analysis_and_content/02_mpas_fad_pre_p
 results/figs/mpas_fad_pre_post.pdf: scripts/02_analysis_and_content/02_mpas_fad_pre_post_maps.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 		
-results/figs/dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/abs_dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/abs_dFAD_gradient_plot.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/dFAD_effort_by_ring.pdf: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/figs/dFAD_effort_by_ring.pdf: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
-results/figs/time_series.pdf: scripts/02_analysis_and_content/04_time_series.R processed_data/annual_rfmo_effort_1deg.rds
+results/figs/time_series.pdf: scripts/02_analysis_and_content/05_time_series.R processed_data/annual_rfmo_effort_1deg.rds
 		cd $(<D); Rscript $(<F)
 
-results/tabs/regression_results.docx: scripts/02_analysis_and_content/03_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
+results/tabs/regression_results.docx: scripts/02_analysis_and_content/04_dfad_gradient.R processed_data/annual_rfmo_effort_1deg.rds processed_data/selected_LSMPAs_viz.gpkg
 		cd $(<D); Rscript $(<F)
 
 # Analysis
